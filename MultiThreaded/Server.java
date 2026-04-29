@@ -2,36 +2,40 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
-
+import java.util.function.*;
 public class Server {
-    public void run(){
-        int port=8010;
-        ServerSocket serverSocket=new ServerSocket(port);
-        serverSocket.setSoTimeout(10000);
-        try{
-            while (true) {
-                System.out.println("Server is listening on port : "+port);
-                Socket acceptedConnection=serverSocket.accept();
-                System.out.println("Connection estabilished with Client : "+acceptedConnection.getRemoteSocketAddress());
 
-                PrintWriter toClient=new PrintWriter(acceptedConnection.getOutputStream());
-                BufferedReader fromClient=new BufferedReader(new InputStreamReader(acceptedConnection.getInputStream()));
-
+    public Consumer<Socket> getConsumer(){
+        return (clientSocket)->{
+            try{
+                PrintWriter toClient =new PrintWriter(clientSocket.getOutputStream());
                 toClient.println("Hello from the Server");
-                String message=fromClient.readLine();
-                System.out.println("Message from client :"+message);
-
                 toClient.close();
-                fromClient.close();
-                acceptedConnection.close();
+                clientSocket.close();
+            }
+            catch(Exception e){
+                e.printStackTrace();
+            }
+        };
+    }
+
+    public static void main(String[] args){
+        int port=8010;
+        Server server=new Server();
+
+        try{
+            ServerSocket serverSocket=new ServerSocket(port);
+            serverSocket.setSoTimeout(10000);
+            System.out.println("Server is Listening on port :"+port);
+            while (true) {
+                Socket acceptedSocket=serverSocket.accept();
+                Thread thread=new Thread(()->server.getConsumer().accept(acceptedSocket));
+                thread.start();
             }
         }
         catch(Exception e){
             e.printStackTrace();
         }
-    }    
+    }  
 
-    public static void main(String[] args) {
-        
-    }
 }
